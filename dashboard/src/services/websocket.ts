@@ -1,11 +1,17 @@
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8001';
+const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/dashboard';
 
 export type SocketMessage = {
   type?: string;
-  topic?: string;
+  event_type?: string;
   event?: string;
+  topic?: string;
+  experiment_id?: string;
+  step_id?: string;
+  device_id?: string;
+  status?: string;
   payload?: Record<string, unknown>;
   data?: Record<string, unknown>;
+  timestamp?: string;
   [key: string]: unknown;
 };
 
@@ -22,7 +28,7 @@ export class MissionControlSocket {
   private ws: WebSocket | null = null;
   private options: SocketClientOptions;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 10;
+  private maxReconnectAttempts = 15;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private isDestroyed = false;
 
@@ -62,7 +68,7 @@ export class MissionControlSocket {
           this.scheduleReconnect();
         }
       };
-    } catch (e) {
+    } catch {
       this.scheduleReconnect();
     }
   }
@@ -70,15 +76,15 @@ export class MissionControlSocket {
   private scheduleReconnect() {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      // Switch to low-frequency background poll
+      // Periodic background retry
       this.reconnectTimer = setTimeout(() => {
         this.reconnectAttempts = 0;
         this.connect();
-      }, 15000);
+      }, 10000);
       return;
     }
 
-    const backoff = Math.min(1000 * Math.pow(1.5, this.reconnectAttempts), 10000);
+    const backoff = Math.min(1000 * Math.pow(1.4, this.reconnectAttempts), 8000);
     this.reconnectAttempts++;
     this.reconnectTimer = setTimeout(() => this.connect(), backoff);
   }

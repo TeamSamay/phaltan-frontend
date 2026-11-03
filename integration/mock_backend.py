@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-SUTRA Mission Control - Local Backend Mock & Integration Verification Server
-Zero external dependencies (uses standard python3 library).
-
-Use this to test the dashboard backend integration or verify contracts
-before merging the external backend code.
+SUTRA Backend - FastAPI-Compatible Local Verification Server
+Implements SUTRA (SIH26174) Backend specifications:
+- Versioned endpoints under /api/v1
+- Pagination format: items, total, limit, offset
+- Event types: HEARTBEAT, STEP_STARTED, STEP_COMPLETED, DEVIATION_DETECTED, etc.
+- Standard Python 3 standard library (no pip dependencies required)
 
 Run:
     python integration/mock_backend.py
@@ -17,23 +18,21 @@ import datetime
 
 PORT = 8000
 
-MOCK_EXPERIMENTS = [
-    {
-        "id": "EXP-2417",
-        "name": "BAS Test Run",
-        "status": "running",
-        "current_step": "Step 03 - Tool transfer",
-        "progress": 68,
-        "completed_steps": 3,
-        "pending_steps": 2,
-        "deviation_count": 1,
-        "started_at": "2026-11-03T10:12:00Z",
-        "updated_at": "2026-11-03T10:15:40Z",
-        "ai_status": "healthy",
-        "backend_status": "healthy",
-        "camera_status": "warning"
-    }
-]
+MOCK_EXPERIMENT = {
+    "id": "EXP-2417",
+    "name": "BAS Wet-Lab Protocol",
+    "status": "running",
+    "current_step": "Step 03 - Tool transfer",
+    "progress": 68,
+    "completed_steps": 3,
+    "pending_steps": 2,
+    "deviation_count": 1,
+    "started_at": "2026-11-03T10:12:00Z",
+    "updated_at": "2026-11-03T10:15:40Z",
+    "ai_status": "healthy",
+    "backend_status": "healthy",
+    "camera_status": "warning"
+}
 
 MOCK_DEVICES = [
     {
@@ -42,41 +41,41 @@ MOCK_DEVICES = [
         "name": "AI Vision Engine",
         "status": "healthy",
         "connection_status": "connected",
-        "host": "192.168.1.101",
+        "host": "127.0.0.1",
         "last_heartbeat": "2026-11-03T10:15:39Z",
-        "last_event": "activity.detected",
+        "last_event": "STEP_STARTED",
         "health": "Inference nominal"
     },
     {
         "id": "BK-01",
         "type": "backend",
-        "name": "Backend Service",
+        "name": "FastAPI Backend Service",
         "status": "healthy",
         "connection_status": "connected",
-        "host": "192.168.1.102",
+        "host": "127.0.0.1:8000",
         "last_heartbeat": "2026-11-03T10:15:38Z",
-        "last_event": "experiment.updated",
-        "health": "API nominal"
+        "last_event": "SYSTEM_STATUS",
+        "health": "API v1 nominal"
     },
     {
         "id": "CAM-07",
         "type": "camera",
-        "name": "Primary Camera",
+        "name": "Primary Camera Stream",
         "status": "warning",
         "connection_status": "degraded",
         "host": "192.168.1.104",
         "last_heartbeat": "2026-11-03T10:15:03Z",
-        "last_event": "frame_loss",
+        "last_event": "CAMERA_RECONNECTED",
         "health": "2 dropped frames"
     }
 ]
 
 MOCK_EVENTS = [
     {
-        "eventId": "evt-1001",
-        "type": "activity.detected",
-        "experimentId": "EXP-2417",
-        "stepId": "step-3",
+        "event_id": "evt-1001",
+        "type": "STEP_STARTED",
+        "experiment_id": "EXP-2417",
+        "step_id": "step-3",
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
         "confidence": 0.94,
         "source": "ai-vision-engine",
@@ -88,60 +87,67 @@ MOCK_EVENTS = [
         }
     },
     {
-        "eventId": "evt-1002",
-        "type": "step.transition",
-        "experimentId": "EXP-2417",
-        "stepId": "step-4",
+        "event_id": "evt-1002",
+        "type": "STEP_COMPLETED",
+        "experiment_id": "EXP-2417",
+        "step_id": "step-2",
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-        "confidence": 0.81,
+        "confidence": 0.93,
         "source": "experiment-engine",
-        "status": "inferred",
+        "status": "verified",
         "payload": {
-            "transition": "step_3_to_4",
-            "action": "tool transfer"
+            "transition": "step_2_to_3",
+            "action": "specimen placement"
+        }
+    },
+    {
+        "event_id": "evt-1003",
+        "type": "DEVIATION_DETECTED",
+        "experiment_id": "EXP-2417",
+        "step_id": "step-4",
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "confidence": 0.58,
+        "source": "backend",
+        "status": "needs_review",
+        "payload": {
+            "message": "Skipped expected step",
+            "reviewRequired": True
         }
     }
 ]
 
-MOCK_ALERTS = [
+MOCK_DEVIATIONS = [
     {
         "id": "AL-001",
+        "deviation_id": "dev-001",
         "level": "warning",
+        "type": "DEVIATION_DETECTED",
         "title": "Skipped step detected",
         "message": "Operator action bypassed expected completed step. Awaiting confirmation.",
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
         "acknowledged": False,
-        "experimentId": "EXP-2417",
-        "stepId": "step-4"
+        "experiment_id": "EXP-2417",
+        "step_id": "step-4"
     }
 ]
 
-MOCK_PERFORMANCE = {
+MOCK_METRICS = {
     "fps": 24,
-    "inferenceLatencyMs": 92,
-    "eventDeliveryDelayMs": 48,
-    "memoryUsagePct": 73,
-    "cpuUsagePct": 62,
-    "droppedFrames": 2,
-    "eventThroughput": 128,
-    "backendHealth": "Nominal"
+    "inference_latency_ms": 92,
+    "event_delivery_delay_ms": 48,
+    "memory_usage_pct": 73,
+    "cpu_usage_pct": 62,
+    "dropped_frames": 2,
+    "event_throughput": 128,
+    "backend_health": "Nominal"
 }
 
-MOCK_TELEMETRY = [
-    {"name": "00:00", "fps": 24, "latency": 92, "throughput": 126},
-    {"name": "00:10", "fps": 25, "latency": 90, "throughput": 129},
-    {"name": "00:20", "fps": 24, "latency": 96, "throughput": 124},
-    {"name": "00:30", "fps": 23, "latency": 104, "throughput": 119},
-    {"name": "00:40", "fps": 22, "latency": 112, "throughput": 118},
-    {"name": "00:50", "fps": 24, "latency": 94, "throughput": 124}
-]
 
-
-class Handler(BaseHTTPRequestHandler):
+class FastAPIHandler(BaseHTTPRequestHandler):
     def _send_cors(self):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Device-Token')
 
     def do_OPTIONS(self):
         self.send_response(204)
@@ -162,58 +168,60 @@ class Handler(BaseHTTPRequestHandler):
         if not path:
             path = '/'
 
-        # Remove /api prefix if present
-        clean_path = path[4:] if path.startswith('/api') else path
-
-        if clean_path in ('/health', '/api/health', ''):
-            self._send_json({"status": "healthy", "ok": True})
-        elif clean_path == '/experiments':
-            self._send_json({"experiments": MOCK_EXPERIMENTS})
-        elif clean_path.startswith('/experiments/'):
-            exp_id = clean_path.split('/')[-1]
-            found = next((e for e in MOCK_EXPERIMENTS if e["id"] == exp_id), MOCK_EXPERIMENTS[0])
-            self._send_json(found)
-        elif clean_path == '/devices':
-            self._send_json({"devices": MOCK_DEVICES})
-        elif clean_path == '/events':
-            self._send_json({"events": MOCK_EVENTS})
-        elif clean_path == '/alerts':
-            self._send_json({"alerts": MOCK_ALERTS})
-        elif clean_path == '/performance':
-            self._send_json(MOCK_PERFORMANCE)
-        elif clean_path == '/telemetry':
-            self._send_json({"telemetry": MOCK_TELEMETRY})
+        # Health endpoints
+        if path in ('/health', '/api/v1/system/status'):
+            self._send_json({"status": "healthy", "ok": True, "service": "sutra-backend"})
+        elif path == '/api/v1/system/metrics':
+            self._send_json(MOCK_METRICS)
+        elif path == '/api/v1/system/logs':
+            self._send_json({"items": ["System boot complete", "FastAPI routes mounted", "SQLite session initialized"]})
+        # Experiment endpoints
+        elif path in ('/api/v1/experiments/current', '/experiments/current'):
+            self._send_json(MOCK_EXPERIMENT)
+        elif path in ('/api/v1/experiments', '/experiments'):
+            self._send_json({"items": [MOCK_EXPERIMENT], "total": 1, "limit": 50, "offset": 0})
+        # Devices endpoints
+        elif path in ('/api/v1/devices', '/devices'):
+            self._send_json({"items": MOCK_DEVICES, "total": len(MOCK_DEVICES), "limit": 50, "offset": 0})
+        # Events endpoints
+        elif path in ('/api/v1/events', '/events'):
+            self._send_json({"items": MOCK_EVENTS, "total": len(MOCK_EVENTS), "limit": 50, "offset": 0})
+        # Deviations endpoints
+        elif path in ('/api/v1/deviations', '/deviations'):
+            self._send_json({"items": MOCK_DEVIATIONS, "total": len(MOCK_DEVIATIONS), "limit": 50, "offset": 0})
         else:
             self._send_json({"status": "healthy", "path": path, "ok": True})
 
     def do_POST(self):
-        clean_path = self.path.split('?')[0].rstrip('/')
-        if clean_path.startswith('/api'):
-            clean_path = clean_path[4:]
-
-        if '/acknowledge' in clean_path:
+        path = self.path.split('?')[0].rstrip('/')
+        if 'acknowledge' in path:
             self._send_json({"ok": True, "acknowledged": True})
-        elif '/start' in clean_path:
+        elif 'start' in path:
             self._send_json({"ok": True, "status": "running"})
-        elif '/complete' in clean_path:
-            self._send_json({"ok": True, "status": "completed"})
+        elif 'stop' in path:
+            self._send_json({"ok": True, "status": "stopped"})
+        elif 'heartbeat' in path:
+            self._send_json({"ok": True, "status": "acknowledged"})
+        elif 'register' in path:
+            self._send_json({"ok": True, "device_id": "AI-01", "token": "dev_token_example"})
         else:
             self._send_json({"ok": True})
 
     def log_message(self, format, *args):
-        # Concise logging
-        sys.stderr.write(f"[Mock Backend] {self.address_string()} - {format % args}\n")
+        sys.stderr.write(f"[SUTRA Backend] {self.address_string()} - {format % args}\n")
 
 
 if __name__ == '__main__':
-    server = HTTPServer(('0.0.0.0', PORT), Handler)
-    print(f"🚀 SUTRA Mission Control Mock Backend active on http://0.0.0.0:{PORT}")
-    print(f"   Health check: http://localhost:{PORT}/health")
-    print(f"   Experiments:  http://localhost:{PORT}/api/experiments")
-    print(f"   Devices:      http://localhost:{PORT}/api/devices")
+    server = HTTPServer(('0.0.0.0', PORT), FastAPIHandler)
+    print(f"🚀 SUTRA Backend Mock Server active on http://127.0.0.1:{PORT}")
+    print(f"   Health check:        http://127.0.0.1:{PORT}/health")
+    print(f"   Current Experiment:  http://127.0.0.1:{PORT}/api/v1/experiments/current")
+    print(f"   Devices:             http://127.0.0.1:{PORT}/api/v1/devices")
+    print(f"   Events:              http://127.0.0.1:{PORT}/api/v1/events")
+    print(f"   Deviations:          http://127.0.0.1:{PORT}/api/v1/deviations")
+    print(f"   WebSocket:           ws://127.0.0.1:{PORT}/ws/dashboard")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\nStopping mock backend.")
+        print("\nStopping SUTRA backend.")
         server.server_close()
-

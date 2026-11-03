@@ -5,85 +5,82 @@ import {
   normalizeLogEvent,
   normalizeAlert,
   normalizePerformance,
+  extractListItems,
 } from '../services/adapter';
 
-describe('Backend Adapter Normalizer', () => {
-  it('correctly normalizes snake_case backend payloads', () => {
+describe('FastAPI Backend Adapter', () => {
+  it('unwraps paginated items envelope from FastAPI list endpoints', () => {
+    const response = {
+      items: [
+        { id: 'EXP-1', name: 'Test 1' },
+        { id: 'EXP-2', name: 'Test 2' },
+      ],
+      total: 2,
+      limit: 50,
+      offset: 0,
+    };
+
+    const items = extractListItems<{ id: string; name: string }>(response);
+    expect(items).toHaveLength(2);
+    expect(items[0].id).toBe('EXP-1');
+  });
+
+  it('correctly normalizes FastAPI snake_case experiment payload', () => {
     const raw = {
-      experiment_id: 'EXP-9999',
-      experiment_name: 'Field Trial Alpha',
-      current_step: 'Step 02 - Calibration',
-      progress: 45,
-      completed_steps: 2,
-      pending_steps: 3,
-      deviation_count: 0,
-      ai_status: 'nominal',
-      backend_status: 'online',
-      camera_status: 'healthy',
+      id: 'EXP-2417',
+      name: 'BAS Wet-Lab Protocol',
+      current_step: 'Step 03 - Tool transfer',
+      progress: 68,
+      completed_steps: 3,
+      pending_steps: 2,
+      deviation_count: 1,
+      ai_status: 'healthy',
+      backend_status: 'healthy',
+      camera_status: 'warning',
     };
 
     const result = normalizeExperiment(raw);
     expect(result).not.toBeNull();
-    expect(result?.id).toBe('EXP-9999');
-    expect(result?.name).toBe('Field Trial Alpha');
-    expect(result?.currentStep).toBe('Step 02 - Calibration');
-    expect(result?.progress).toBe(45);
+    expect(result?.id).toBe('EXP-2417');
+    expect(result?.name).toBe('BAS Wet-Lab Protocol');
+    expect(result?.currentStep).toBe('Step 03 - Tool transfer');
+    expect(result?.progress).toBe(68);
     expect(result?.aiStatus).toBe('healthy');
   });
 
-  it('correctly normalizes camelCase backend payloads', () => {
+  it('normalizes FastAPI device payloads', () => {
     const raw = {
-      id: 'EXP-1234',
-      name: 'Lab Test',
-      currentStep: 'Step 01',
-      progress: 10,
-      completedSteps: 1,
-      pendingSteps: 5,
-      deviationCount: 0,
-      aiStatus: 'warning',
-      backendStatus: 'healthy',
-      cameraStatus: 'healthy',
-    };
-
-    const result = normalizeExperiment(raw);
-    expect(result).not.toBeNull();
-    expect(result?.id).toBe('EXP-1234');
-    expect(result?.aiStatus).toBe('warning');
-  });
-
-  it('normalizes device payloads with IP and status mapping', () => {
-    const raw = {
-      device_id: 'CAM-01',
-      device_type: 'camera',
-      device_name: 'Overhead Camera',
-      health_status: 'ok',
+      id: 'AI-01',
+      device_type: 'ai',
+      name: 'AI Vision Engine',
+      status: 'healthy',
       connection_status: 'connected',
-      ip_address: '192.168.1.50',
+      host: '127.0.0.1',
+      health: 'Inference nominal',
     };
 
     const result = normalizeDevice(raw);
     expect(result).not.toBeNull();
-    expect(result?.id).toBe('CAM-01');
-    expect(result?.type).toBe('camera');
-    expect(result?.host).toBe('192.168.1.50');
+    expect(result?.id).toBe('AI-01');
+    expect(result?.type).toBe('ai');
+    expect(result?.host).toBe('127.0.0.1');
     expect(result?.status).toBe('healthy');
   });
 
-  it('normalizes alert items', () => {
+  it('normalizes FastAPI deviations into alerts', () => {
     const raw = {
-      alert_id: 'AL-500',
-      severity: 'critical',
-      summary: 'Sensor Offline',
-      detail: 'Lost optical feed',
+      deviation_id: 'dev-001',
+      type: 'DEVIATION_DETECTED',
+      severity: 'warning',
+      title: 'Skipped step detected',
+      message: 'Operator action bypassed step',
       is_acknowledged: false,
     };
 
     const alert = normalizeAlert(raw);
     expect(alert).not.toBeNull();
-    expect(alert?.id).toBe('AL-500');
-    expect(alert?.level).toBe('critical');
-    expect(alert?.title).toBe('Sensor Offline');
+    expect(alert?.id).toBe('dev-001');
+    expect(alert?.title).toBe('Skipped step detected');
     expect(alert?.acknowledged).toBe(false);
   });
 });
-

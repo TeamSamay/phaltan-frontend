@@ -4,7 +4,12 @@ interface LiveMonitoringPageProps {
 }
 
 export function LiveMonitoringPage({ event, status }: LiveMonitoringPageProps) {
-  const activityName = String(event?.payload?.activity ?? 'hand_object_interaction');
+  const activityName = String(
+    event?.payload?.activity ??
+    event?.payload?.action ??
+    (event as any)?.type ??
+    'hand_object_interaction'
+  );
   const confidenceScore = event?.confidence ? (event.confidence * 100).toFixed(1) : '94.0';
 
   return (

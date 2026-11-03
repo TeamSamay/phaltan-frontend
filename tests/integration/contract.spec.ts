@@ -5,14 +5,15 @@ describe('SUTRA integration contract', () => {
     const contract = {
       dashboard: 'react-ts',
       backendHealth: '/health',
-      websocket: 'ws://localhost:8001',
+      websocket: 'ws://localhost:8000/ws/dashboard',
+      apiPrefix: '/api/v1',
       eventFlow: 'AI -> Backend -> WebSocket -> Dashboard',
       alerting: 'acknowledgement-supported-if-backend-allows',
     };
 
     expect(contract.dashboard).toBe('react-ts');
     expect(contract.backendHealth).toBe('/health');
+    expect(contract.websocket).toContain('/ws/dashboard');
     expect(contract.eventFlow).toContain('AI');
   });
 });
-

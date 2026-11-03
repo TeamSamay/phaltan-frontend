@@ -6,7 +6,7 @@ import type { AlertItem, DeviceInfo, ExperimentSummary, LogEvent, PerformanceMet
 
 export const initialMockExperiment: ExperimentSummary = {
   id: 'EXP-2417',
-  name: 'BAS Test Run',
+  name: 'BAS Wet-Lab Protocol',
   status: 'running',
   currentStep: 'Step 03 - Tool transfer',
   progress: 68,
@@ -27,31 +27,31 @@ export const initialMockDevices: DeviceInfo[] = [
     name: 'AI Vision Engine',
     status: 'healthy',
     connectionStatus: 'connected',
-    host: '192.168.1.101',
+    host: '127.0.0.1',
     lastHeartbeat: '2026-11-03T10:15:39Z',
-    lastEvent: 'activity.detected',
+    lastEvent: 'STEP_STARTED',
     health: 'Inference nominal',
   },
   {
     id: 'BK-01',
     type: 'backend',
-    name: 'Backend Service',
+    name: 'FastAPI Backend Service',
     status: 'healthy',
     connectionStatus: 'connected',
-    host: '192.168.1.102',
+    host: '127.0.0.1:8000',
     lastHeartbeat: '2026-11-03T10:15:38Z',
-    lastEvent: 'experiment.updated',
-    health: 'API nominal',
+    lastEvent: 'SYSTEM_STATUS',
+    health: 'API v1 nominal',
   },
   {
     id: 'CAM-07',
     type: 'camera',
-    name: 'Primary Camera',
+    name: 'Primary Camera Stream',
     status: 'warning',
     connectionStatus: 'degraded',
     host: '192.168.1.104',
     lastHeartbeat: '2026-11-03T10:15:03Z',
-    lastEvent: 'frame_loss',
+    lastEvent: 'CAMERA_RECONNECTED',
     health: '2 dropped frames',
   },
 ];
@@ -59,29 +59,29 @@ export const initialMockDevices: DeviceInfo[] = [
 export const initialMockEvents: LogEvent[] = [
   {
     eventId: 'evt-1001',
-    type: 'activity.detected',
+    type: 'STEP_STARTED',
     experimentId: 'EXP-2417',
     stepId: 'step-3',
     timestamp: '2026-11-03T10:15:39Z',
     confidence: 0.94,
     source: 'ai-vision-engine',
     status: 'verified',
-    payload: { activity: 'hand_object_interaction', objects: ['cup', 'hand'], confidence: 0.94 },
+    payload: { activity: 'hand_object_interaction', objects: ['cup', 'hand', 'pipette'], confidence: 0.94 },
   },
   {
     eventId: 'evt-1002',
-    type: 'step.transition',
+    type: 'STEP_COMPLETED',
     experimentId: 'EXP-2417',
-    stepId: 'step-4',
+    stepId: 'step-2',
     timestamp: '2026-11-03T10:15:20Z',
-    confidence: 0.81,
+    confidence: 0.93,
     source: 'experiment-engine',
-    status: 'inferred',
-    payload: { transition: 'step_3_to_4', action: 'tool transfer' },
+    status: 'verified',
+    payload: { transition: 'step_2_to_3', action: 'specimen placement' },
   },
   {
     eventId: 'evt-1003',
-    type: 'deviation.alert',
+    type: 'DEVIATION_DETECTED',
     experimentId: 'EXP-2417',
     stepId: 'step-4',
     timestamp: '2026-11-03T10:14:55Z',
@@ -106,8 +106,8 @@ export const initialMockAlerts: AlertItem[] = [
   {
     id: 'AL-002',
     level: 'info',
-    title: 'Frame delivery slight delay',
-    message: 'Camera feed latency increased to 92 ms.',
+    title: 'Optical feed latency notice',
+    message: 'Camera frame latency measured 92 ms.',
     timestamp: '2026-11-03T10:14:12Z',
     acknowledged: true,
   },
@@ -158,22 +158,20 @@ export function useMissionControl() {
 
       setConnectionMode('live');
 
-      // Fetch all endpoints concurrently
-      const [expList, devList, evtList, alertList, perf, telem] = await Promise.all([
-        api.getExperiments(),
+      // Concurrent fetch of all versioned REST endpoints
+      const [currentExp, devList, evtList, deviationList, metrics] = await Promise.all([
+        api.getCurrentExperiment(),
         api.getDevices(),
-        api.getEvents(),
-        api.getAlerts(),
-        api.getPerformance(),
-        api.getTelemetry(),
+        api.getEvents(50),
+        api.getDeviations(),
+        api.getSystemMetrics(),
       ]);
 
-      if (expList.length > 0) setExperiment(expList[0]);
+      if (currentExp) setExperiment(currentExp);
       if (devList.length > 0) setDevices(devList);
       if (evtList.length > 0) setEvents(evtList);
-      if (alertList.length > 0) setAlerts(alertList);
-      if (perf) setPerformance(perf);
-      if (telem.length > 0) setTelemetry(telem);
+      if (deviationList.length > 0) setAlerts(deviationList);
+      if (metrics) setPerformance(metrics);
 
       setLastSyncTime(new Date().toLocaleTimeString());
     } catch {
@@ -181,65 +179,69 @@ export function useMissionControl() {
     }
   }, []);
 
-  // Handle incoming WebSocket messages
-  const handleSocketMessage = useCallback((msg: SocketMessage) => {
-    const type = msg.type || msg.event || msg.topic;
-    const payload = (msg.payload || msg.data || msg) as Record<string, unknown>;
+  // Handle incoming broadcast messages from /ws/dashboard
+  const handleSocketMessage = useCallback(
+    (msg: SocketMessage) => {
+      const eventType = String(msg.type ?? msg.event_type ?? msg.event ?? '').toUpperCase();
+      const payload = (msg.payload ?? msg.data ?? msg) as Record<string, unknown>;
 
-    if (type?.includes('experiment')) {
-      const updated = normalizeExperiment(payload);
-      if (updated) setExperiment(updated);
-    } else if (type?.includes('device') || type?.includes('heartbeat')) {
-      const updatedDev = normalizeDevice(payload);
-      if (updatedDev) {
-        setDevices((prev) => {
-          const index = prev.findIndex((d) => d.id === updatedDev.id);
-          if (index >= 0) {
-            const next = [...prev];
-            next[index] = { ...next[index], ...updatedDev };
-            return next;
-          }
-          return [...prev, updatedDev];
-        });
+      if (eventType.includes('STEP')) {
+        // Step transition occurred: update experiment and trigger sync
+        const updated = normalizeExperiment(payload);
+        if (updated) setExperiment(updated);
+        fetchBackendData();
+      } else if (eventType.includes('DEVIATION') || eventType.includes('REVIEW')) {
+        const newAlert = normalizeAlert(payload);
+        if (newAlert) {
+          setAlerts((prev) => [newAlert, ...prev.filter((a) => a.id !== newAlert.id)]);
+        }
+      } else if (eventType.includes('CAMERA')) {
+        const isDown = eventType.includes('DISCONNECTED');
+        setExperiment((prev) => ({
+          ...prev,
+          cameraStatus: isDown ? 'critical' : 'healthy',
+        }));
+      } else if (eventType.includes('HEARTBEAT') || eventType.includes('DEVICE')) {
+        const updatedDev = normalizeDevice(payload);
+        if (updatedDev) {
+          setDevices((prev) => {
+            const index = prev.findIndex((d) => d.id === updatedDev.id);
+            if (index >= 0) {
+              const next = [...prev];
+              next[index] = { ...next[index], ...updatedDev };
+              return next;
+            }
+            return [...prev, updatedDev];
+          });
+        }
       }
-    } else if (type?.includes('alert')) {
-      const newAlert = normalizeAlert(payload);
-      if (newAlert) {
-        setAlerts((prev) => [newAlert, ...prev.filter((a) => a.id !== newAlert.id)]);
-      }
-    } else if (type?.includes('activity') || type?.includes('event')) {
-      const newEvent = normalizeLogEvent(payload);
-      if (newEvent) {
-        setEvents((prev) => [newEvent, ...prev.slice(0, 49)]);
-      }
-    } else if (type?.includes('telemetry')) {
-      if (payload.fps !== undefined || payload.latency !== undefined) {
-        const timeLabel = new Date().toLocaleTimeString([], { minute: '2-digit', second: '2-digit' });
-        setTelemetry((prev) => [
-          ...prev.slice(1),
-          {
-            name: timeLabel,
-            fps: Number(payload.fps ?? prev[prev.length - 1]?.fps ?? 24),
-            latency: Number(payload.latency ?? prev[prev.length - 1]?.latency ?? 90),
-            throughput: Number(payload.throughput ?? prev[prev.length - 1]?.throughput ?? 120),
-          },
-        ]);
-      }
-    }
-  }, []);
 
-  // Connect WebSocket & start background check
+      // Append real-time telemetry tick if available
+      const nowLabel = new Date().toLocaleTimeString([], { minute: '2-digit', second: '2-digit' });
+      const fpsVal = Number(payload.fps ?? performance.fps ?? 24);
+      const latencyVal = Number(payload.latency ?? payload.latency_ms ?? performance.inferenceLatencyMs ?? 92);
+      const throughputVal = Number(payload.throughput ?? performance.eventThroughput ?? 124);
+
+      setTelemetry((prev) => [
+        ...prev.slice(1),
+        { name: nowLabel, fps: fpsVal, latency: latencyVal, throughput: throughputVal },
+      ]);
+    },
+    [fetchBackendData, performance]
+  );
+
   useEffect(() => {
     fetchBackendData();
 
-    // Polling every 10 seconds if backend is offline or as sync fallback
-    const pollTimer = setInterval(fetchBackendData, 10000);
+    // 8-second interval polling for updates and health checking
+    const pollTimer = setInterval(fetchBackendData, 8000);
 
-    // Initialize socket
+    // Initialize FastAPI WebSocket connection at /ws/dashboard
     socketRef.current = new MissionControlSocket(undefined, {
       onOpen: () => {
         setWsConnected(true);
         setConnectionMode('live');
+        fetchBackendData();
       },
       onClose: () => {
         setWsConnected(false);
@@ -254,10 +256,8 @@ export function useMissionControl() {
   }, [fetchBackendData, handleSocketMessage]);
 
   const acknowledgeAlert = useCallback(async (id: string) => {
-    setAlerts((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, acknowledged: true } : a))
-    );
-    await api.acknowledgeAlert(id);
+    setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, acknowledged: true } : a)));
+    await api.acknowledgeDeviation(id);
   }, []);
 
   return {
@@ -274,4 +274,3 @@ export function useMissionControl() {
     acknowledgeAlert,
   };
 }
-

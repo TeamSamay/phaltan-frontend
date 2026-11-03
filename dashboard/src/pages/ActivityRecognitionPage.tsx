@@ -47,7 +47,7 @@ export function ActivityRecognitionPage({ event }: ActivityRecognitionPageProps)
           <div className="metric-row">
             <span className="metric-label">Current Action Class</span>
             <span className="metric-value" style={{ fontSize: 15, fontWeight: 700, color: 'var(--primary)' }}>
-              {String(payload.activity ?? 'hand_object_interaction')}
+              {String(payload.activity ?? payload.action ?? event.type ?? 'STEP_STARTED')}
             </span>
           </div>
 
