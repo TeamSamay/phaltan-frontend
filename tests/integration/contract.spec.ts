@@ -1,4 +1,4 @@
-describe('SUTRA demo integration contract', () => {
+describe('SUTRA integration contract', () => {
   it('should define the required mission control integration markers', () => {
     const contract = {
       dashboard: 'react-ts',
@@ -13,3 +13,4 @@ describe('SUTRA demo integration contract', () => {
     expect(contract.eventFlow).toContain('AI');
   });
 });
+

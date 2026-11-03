@@ -34,7 +34,7 @@ import { SystemPerformancePage } from '../pages/SystemPerformancePage';
 
 const navSections = [
   {
-    title: 'Mission Operations',
+    title: 'Operations',
     items: [
       { id: 'overview', label: 'Mission Overview', icon: DashboardIcon },
       { id: 'live', label: 'Live Monitoring', icon: VideoIcon },
@@ -43,7 +43,7 @@ const navSections = [
     ],
   },
   {
-    title: 'Telemetry & System',
+    title: 'System',
     items: [
       { id: 'alerts', label: 'Alerts & Deviations', icon: AlertIcon },
       { id: 'devices', label: 'Device Management', icon: DevicesIcon },
@@ -162,7 +162,7 @@ export default function App() {
             </div>
             <div className="brand-text-container">
               <span className="brand-title">SUTRA Mission Control</span>
-              <span className="brand-subtitle">Autonomous Flight & Lab Console</span>
+              <span className="brand-subtitle">Flight & Lab Control</span>
             </div>
           </div>
         </div>
@@ -190,11 +190,11 @@ export default function App() {
             />
             {connectionMode === 'live' ? (
               <span>
-                Backend: <strong>Connected</strong> {wsConnected && '(WS Live)'}
+                Backend: <strong>Online</strong> {wsConnected && '(Live)'}
               </span>
             ) : (
               <span>
-                Backend: <strong>Standby (Demo Mode)</strong>
+                Backend: <strong>Standby (Local)</strong>
               </span>
             )}
             <RefreshIcon size={13} style={{ marginLeft: 4, opacity: 0.7 }} />
@@ -288,7 +288,7 @@ export default function App() {
                 <span className="kpi-value">Nominal</span>
               </div>
               <div className="kpi-rate">
-                <span>●</span> All 3 Subsystems Synced
+                <span>●</span> All Systems Ready
               </div>
             </div>
 
@@ -302,14 +302,14 @@ export default function App() {
                 <span className="kpi-value">98.4%</span>
               </div>
               <div className="kpi-rate">
-                <span>▲</span> Frame Confidence Stable (+1.2%)
+                <span>▲</span> Vision Accurate (+1.2%)
               </div>
             </div>
 
             {/* Mission Progress Card */}
             <div className="card kpi-card">
               <div className="kpi-header">
-                <span>Protocol Pipeline</span>
+                <span>Mission Steps</span>
                 <span className="status-badge status-running">Running</span>
               </div>
               <div className="kpi-value-row">
@@ -326,7 +326,7 @@ export default function App() {
             {/* Video Latency & Throughput Card */}
             <div className="card kpi-card">
               <div className="kpi-header">
-                <span>Optical Link Latency</span>
+                <span>Camera Lag</span>
                 <span className="status-badge status-warning">92 ms</span>
               </div>
               <div className="kpi-value-row">
@@ -343,7 +343,7 @@ export default function App() {
             <div className="card">
               <div className="card-header">
                 <div className="card-title-group">
-                  <h3 className="card-title">Telemetry Overview</h3>
+                  <h3 className="card-title">Live Chart</h3>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>

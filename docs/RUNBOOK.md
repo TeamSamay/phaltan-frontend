@@ -11,8 +11,8 @@
 
 1. Copy `.env.example` to `.env`.
 2. Set the AI host, backend host, and dashboard host.
-3. Start the AI service on its laptop.
-4. Start the backend service on its laptop.
+3. Start the AI service on its machine.
+4. Start the backend service on its machine.
 5. Start the dashboard with the project in `dashboard/`.
 6. Confirm backend health and AI device registration.
 7. Create and start an experiment.
@@ -25,10 +25,10 @@
 - WebSocket connectivity: confirm bidirectional event stream.
 - Dashboard data refresh: confirm event-driven updates render automatically.
 
-## Demo sequence
+## Test sequence
 
 1. Register AI device.
-2. Create DEMO experiment.
+2. Create test experiment.
 3. Start experiment.
 4. Feed sample video or camera stream.
 5. Trigger protocol steps.

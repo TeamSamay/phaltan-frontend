@@ -10,7 +10,7 @@ The frontend dashboard is designed to connect seamlessly with any Python (FastAP
 
 - **Vite Proxy Built-in**: All requests to `/api` are automatically proxied to `VITE_API_BASE_URL` (default: `http://localhost:8000`).
 - **Flexible Field Normalization**: The dashboard's adapter (`src/services/adapter.ts`) automatically normalizes both **`snake_case`** (e.g. `experiment_id`, `current_step`, `completed_steps`) and **`camelCase`** (`experimentId`, `currentStep`), as well as unwrapping responses formatted as `{ "data": [...] }` or `{ "experiments": [...] }`.
-- **Zero-Downtime Fallback**: If the backend is temporarily offline or rebooting, the UI gracefully falls back to demo mode without crashing and automatically re-syncs once the backend is live.
+- **Zero-Downtime Fallback**: If the backend is temporarily offline or rebooting, the UI gracefully falls back to local data without crashing and automatically re-syncs once the backend is live.
 
 ---
 
@@ -120,7 +120,7 @@ Keep the backend in its own directory or repository, and run it on port `8000`:
    cd dashboard
    npm run dev
    ```
-   The dashboard will automatically detect the backend and switch the top pill to **`Backend: Connected`**!
+   The dashboard will automatically detect the backend and switch the top pill to **`Backend: Online`**!
 
 ---
 
@@ -137,5 +137,4 @@ cd dashboard
 npm run dev
 ```
 
-The dashboard will connect immediately to the running server, demonstrating live synchronization.
-
+The dashboard will connect immediately to the running server, showing live synchronization.

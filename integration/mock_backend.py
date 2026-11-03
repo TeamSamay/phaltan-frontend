@@ -20,7 +20,7 @@ PORT = 8000
 MOCK_EXPERIMENTS = [
     {
         "id": "EXP-2417",
-        "name": "BAS Demo Sequence",
+        "name": "BAS Test Run",
         "status": "running",
         "current_step": "Step 03 - Tool transfer",
         "progress": 68,

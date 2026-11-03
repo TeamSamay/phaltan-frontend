@@ -6,7 +6,7 @@ import type { AlertItem, DeviceInfo, ExperimentSummary, LogEvent, PerformanceMet
 
 export const initialMockExperiment: ExperimentSummary = {
   id: 'EXP-2417',
-  name: 'BAS Demo Sequence',
+  name: 'BAS Test Run',
   status: 'running',
   currentStep: 'Step 03 - Tool transfer',
   progress: 68,
@@ -133,7 +133,7 @@ export const initialPerformance: PerformanceMetrics = {
   backendHealth: 'Nominal',
 };
 
-export type ConnectionMode = 'live' | 'demo' | 'connecting';
+export type ConnectionMode = 'live' | 'local' | 'connecting';
 
 export function useMissionControl() {
   const [experiment, setExperiment] = useState<ExperimentSummary>(initialMockExperiment);
@@ -142,7 +142,7 @@ export function useMissionControl() {
   const [alerts, setAlerts] = useState<AlertItem[]>(initialMockAlerts);
   const [telemetry, setTelemetry] = useState(initialTelemetry);
   const [performance, setPerformance] = useState<PerformanceMetrics>(initialPerformance);
-  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('demo');
+  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('local');
   const [wsConnected, setWsConnected] = useState<boolean>(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('Just now');
 
@@ -152,7 +152,7 @@ export function useMissionControl() {
     try {
       const health = await api.getHealth();
       if (!health) {
-        setConnectionMode('demo');
+        setConnectionMode('local');
         return;
       }
 
@@ -177,7 +177,7 @@ export function useMissionControl() {
 
       setLastSyncTime(new Date().toLocaleTimeString());
     } catch {
-      setConnectionMode('demo');
+      setConnectionMode('local');
     }
   }, []);
 
