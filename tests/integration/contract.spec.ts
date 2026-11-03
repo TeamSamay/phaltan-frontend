@@ -1,3 +1,5 @@
+import { describe, it, expect } from 'vitest';
+
 describe('SUTRA integration contract', () => {
   it('should define the required mission control integration markers', () => {
     const contract = {
