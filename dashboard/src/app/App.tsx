@@ -161,8 +161,8 @@ export default function App() {
               <span className="brand-pulse-ring" />
             </div>
             <div className="brand-text-container">
-              <span className="brand-title">SUTRA</span>
-              <span className="brand-subtitle">Mission Control</span>
+              <span className="brand-title">SUTRA-AI</span>
+
             </div>
           </div>
         </div>
