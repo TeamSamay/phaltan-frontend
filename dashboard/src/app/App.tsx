@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import {
   CartesianGrid,
   Line,
@@ -161,8 +161,8 @@ export default function App() {
               <span className="brand-pulse-ring" />
             </div>
             <div className="brand-text-container">
-              <span className="brand-title">SUTRA Mission Control</span>
-              <span className="brand-subtitle">Flight & Lab Control</span>
+              <span className="brand-title">SUTRA</span>
+              <span className="brand-subtitle">Mission Control</span>
             </div>
           </div>
         </div>
@@ -288,7 +288,7 @@ export default function App() {
                 <span className="kpi-value">Nominal</span>
               </div>
               <div className="kpi-rate">
-                <span>●</span> All Systems Ready
+                <span>â—</span> All Systems Ready
               </div>
             </div>
 
@@ -302,7 +302,7 @@ export default function App() {
                 <span className="kpi-value">98.4%</span>
               </div>
               <div className="kpi-rate">
-                <span>▲</span> Vision Accurate (+1.2%)
+                <span>â–²</span> Vision Accurate (+1.2%)
               </div>
             </div>
 
@@ -333,7 +333,7 @@ export default function App() {
                 <span className="kpi-value">24.2 FPS</span>
               </div>
               <div className="kpi-rate neutral">
-                <span>■</span> 2 Dropped Frames (CAM-07)
+                <span>â– </span> 2 Dropped Frames (CAM-07)
               </div>
             </div>
           </div>
@@ -424,3 +424,5 @@ export default function App() {
     </div>
   );
 }
+
+
